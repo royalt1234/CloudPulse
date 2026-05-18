@@ -1,0 +1,25 @@
+{{- $services := list
+  (dict "name" "metrics-svc" "port" .Values.metricsSvc.port)
+  (dict "name" "alerts-svc"  "port" .Values.alertsSvc.port)
+  (dict "name" "cost-svc"    "port" .Values.costSvc.port)
+  (dict "name" "frontend"    "port" .Values.frontend.port)
+-}}
+{{- range $svc := $services }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $svc.name }}
+  namespace: {{ $.Values.namespace }}
+  labels:
+    app: {{ $svc.name }}
+    {{- include "cloudpulse.labels" $ | nindent 4 }}
+spec:
+  selector:
+    app: {{ $svc.name }}
+  ports:
+    - port: {{ $svc.port }}
+      targetPort: {{ $svc.port }}
+      protocol: TCP
+  type: ClusterIP
+{{- end }}

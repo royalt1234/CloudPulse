@@ -1,0 +1,88 @@
+name: Build and Deploy CloudPulse
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'services/**'
+      - 'frontend/**'
+      - 'helm/**'
+      - 'terraform/**'
+
+env:
+  IMAGE_TAG: ${{ github.sha }}
+  PROJECT_NAME: cloudpulse
+  AWS_REGION: eu-west-2
+
+jobs:
+  deploy:
+    name: Build, Deploy, and Verify
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        creds: '{"clientId":"${{ secrets.AZURE_CLIENT_ID }}","clientSecret":"${{ secrets.AZURE_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AZURE_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AZURE_TENANT_ID }}"}'
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.8.4
+
+    - name: Terraform Init
+      run: terraform init -backend-config="resource_group_name=rg-cloudpulse-tfstate" -backend-config="storage_account_name=cloudpulsetfstate" -backend-config="container_name=tfstate" -backend-config="key=cloudpulse.terraform.tfstate"
+      working-directory: terraform
+      env:
+        ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+        ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+        ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+
+    - name: Terraform Apply
+      run: terraform apply -auto-approve -var="image_tag=$IMAGE_TAG"
+      working-directory: terraform
+      env:
+        ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+        ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+        ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_DEFAULT_REGION: ${{ env.AWS_REGION }}
+        GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+        GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
+
+    - name: Get AKS Credentials
+      run: |
+        az aks get-credentials --resource-group rg-${{ env.PROJECT_NAME }}-prod --name ${{ env.PROJECT_NAME }}-aks --overwrite-existing
+
+    - name: Smoke Tests
+      run: |
+        AZURE_IP=$(kubectl get ingress cloudpulse-ingress -n cloudpulse -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || \
+                   kubectl get ingress cloudpulse-ingress -n cloudpulse -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+        
+        if [ -z "$AZURE_IP" ]; then
+          echo "Failed to get Ingress IP"
+          exit 1
+        fi
+        
+        echo "Testing endpoint: http://$AZURE_IP"
+        for path in "/api/metrics/health" "/api/alerts/health" "/api/cost/health"; do
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "http://$AZURE_IP$path")
+          if [ "$STATUS" = "200" ]; then
+            echo "✓ $path"
+          else
+            echo "✗ $path returned $STATUS"
+            exit 1
+          fi
+        done
+        
+        echo "============================================"
+        echo "✓ CloudPulse deployed successfully!"
+        echo "  Dashboard → http://$AZURE_IP"
+        echo "============================================"

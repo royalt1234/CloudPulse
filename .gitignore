@@ -1,0 +1,29 @@
+# Terraform state
+**/.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfstate.d/
+.terraform.lock.hcl
+
+# Secrets
+.env
+.env.local
+*.pem
+*.key
+
+# URL output files (written by deploy.sh)
+.aws_url
+.azure_url
+
+# Node
+node_modules/
+dist/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,147 @@
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - services/**
+      - frontend/**
+      - helm/**
+      - terraform/**
+
+variables:
+  - group: cloudpulse-secrets      # Library group with: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AZURE_SUBSCRIPTION_ID, AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET
+  - name:  IMAGE_TAG
+    value: "$(Build.BuildId)"
+  - name:  PROJECT_NAME
+    value: "cloudpulse"
+  - name:  AWS_REGION
+    value: "eu-west-2"
+
+stages:
+# ═══════════════════════════════════════════════════════════
+# Stage 1 — Build & Push Docker Images
+# ═══════════════════════════════════════════════════════════
+- stage: Build
+  displayName: "Build & Push Images"
+  jobs:
+  - job: BuildImages
+    displayName: "Docker Build → ECR + ACR"
+    pool:
+      vmImage: "ubuntu-latest"
+    steps:
+    - checkout: self
+
+    - task: AzureCLI@2
+      displayName: "ACR Login"
+      inputs:
+        azureSubscription: "Azure-ServiceConnection"
+        scriptType: "bash"
+        scriptLocation: "inlineScript"
+        inlineScript: |
+          ACR_SERVER=$(az acr list --resource-group rg-$(PROJECT_NAME)-prod --query "[0].loginServer" -o tsv)
+          echo "##vso[task.setvariable variable=ACR_SERVER;isOutput=true]$ACR_SERVER"
+          az acr login --name $ACR_SERVER
+      name: SetACR
+
+    - script: |
+        set -e
+        SERVICES="metrics-svc alerts-svc cost-svc"
+        for svc in $SERVICES; do
+          ACR_IMAGE="$(SetACR.ACR_SERVER)/$(PROJECT_NAME)/$svc:$(IMAGE_TAG)"
+          docker build -t $ACR_IMAGE services/$svc
+          docker push $ACR_IMAGE
+        done
+        # Frontend
+        docker build -t "$(SetACR.ACR_SERVER)/$(PROJECT_NAME)/frontend:$(IMAGE_TAG)" frontend
+        docker push "$(SetACR.ACR_SERVER)/$(PROJECT_NAME)/frontend:$(IMAGE_TAG)"
+      displayName: "Build & Push all services"
+
+# ═══════════════════════════════════════════════════════════
+# Stage 2 — Terraform Apply (Infra + Deploy)
+# ═══════════════════════════════════════════════════════════
+- stage: Deploy
+  displayName: "Terraform Apply"
+  dependsOn: Build
+  jobs:
+  - job: TerraformApply
+    displayName: "terraform apply"
+    pool:
+      vmImage: "ubuntu-latest"
+    steps:
+    - checkout: self
+
+    - task: TerraformInstaller@1
+      displayName: "Install Terraform"
+      inputs:
+        terraformVersion: "1.8.4"
+
+    - task: TerraformTaskV4@4
+      displayName: "terraform init"
+      inputs:
+        provider: "azurerm"
+        command: "init"
+        workingDirectory: "$(System.DefaultWorkingDirectory)/terraform"
+        backendServiceArm: "Azure-ServiceConnection"
+        backendAzureRmResourceGroupName: "rg-cloudpulse-tfstate"
+        backendAzureRmStorageAccountName: "cloudpulsetfstate"
+        backendAzureRmContainerName: "tfstate"
+        backendAzureRmKey: "cloudpulse.terraform.tfstate"
+
+    - task: TerraformTaskV4@4
+      displayName: "terraform apply"
+      inputs:
+        provider: "azurerm"
+        command: "apply"
+        workingDirectory: "$(System.DefaultWorkingDirectory)/terraform"
+        commandOptions: '-auto-approve -var="image_tag=$(IMAGE_TAG)"'
+        environmentServiceNameAzureRM: "Azure-ServiceConnection"
+      env:
+        AWS_ACCESS_KEY_ID:     $(AWS_ACCESS_KEY_ID)
+        AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
+        AWS_DEFAULT_REGION:    $(AWS_REGION)
+        GOOGLE_CREDENTIALS:    $(GOOGLE_CREDENTIALS)
+        GOOGLE_PROJECT:        $(GOOGLE_PROJECT)
+        ARM_SUBSCRIPTION_ID:   $(AZURE_SUBSCRIPTION_ID)
+        ARM_TENANT_ID:         $(AZURE_TENANT_ID)
+        ARM_CLIENT_ID:         $(AZURE_CLIENT_ID)
+        ARM_CLIENT_SECRET:     $(AZURE_CLIENT_SECRET)
+
+# ═══════════════════════════════════════════════════════════
+# Stage 3 — Smoke Test
+# ═══════════════════════════════════════════════════════════
+- stage: Verify
+  displayName: "Smoke Tests"
+  dependsOn: Deploy
+  jobs:
+  - job: SmokeTest
+    displayName: "Health check all endpoints"
+    pool:
+      vmImage: "ubuntu-latest"
+    steps:
+    - task: AzureCLI@2
+      displayName: "Get AKS URL"
+      inputs:
+        azureSubscription: "Azure-ServiceConnection"
+        scriptType: "bash"
+        scriptLocation: "inlineScript"
+        inlineScript: |
+          az aks get-credentials --resource-group rg-$(PROJECT_NAME)-prod --name $(PROJECT_NAME)-aks --overwrite-existing
+          AZURE_IP=$(kubectl get ingress cloudpulse-ingress -n cloudpulse -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || \
+                   kubectl get ingress cloudpulse-ingress -n cloudpulse -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+          echo "##vso[task.setvariable variable=AZURE_URL]$AZURE_IP"
+
+    - script: |
+        echo "Testing endpoint: http://$(AZURE_URL)"
+        for path in "/api/metrics/health" "/api/alerts/health" "/api/cost/health"; do
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "http://$(AZURE_URL)$path")
+          [ "$STATUS" = "200" ] && echo "✓ $path" || { echo "✗ $path returned $STATUS"; exit 1; }
+        done
+      displayName: "Health check endpoints"
+
+    - script: |
+        echo "============================================"
+        echo "✓ CloudPulse deployed successfully!"
+        echo "  Dashboard → http://$(AZURE_URL)"
+        echo "============================================"
+      displayName: "Print deployment URLs"

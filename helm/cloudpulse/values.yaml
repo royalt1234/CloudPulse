@@ -1,0 +1,51 @@
+# Default values — overridden by values-aws.yaml / values-azure.yaml
+global:
+  imageRegistry: ""   # e.g. 123456789.dkr.ecr.eu-west-2.amazonaws.com
+  imageTag: "latest"
+  imagePullSecrets: []
+  azureClientId: ""   # Azure Workload Identity Client ID
+
+namespace: cloudpulse
+
+metricsSvc:
+  image: metrics-svc
+  port: 8001
+  replicas: 2
+  resources:
+    requests: { cpu: "100m", memory: "128Mi" }
+    limits:   { cpu: "300m", memory: "256Mi" }
+
+alertsSvc:
+  image: alerts-svc
+  port: 8002
+  replicas: 2
+  resources:
+    requests: { cpu: "100m", memory: "128Mi" }
+    limits:   { cpu: "300m", memory: "256Mi" }
+
+costSvc:
+  image: cost-svc
+  port: 8003
+  replicas: 1
+  awsRoleArn: ""
+  gcpProviderName: ""
+  gcpServiceAccount: ""
+  resources:
+    requests: { cpu: "100m", memory: "128Mi" }
+    limits:   { cpu: "200m", memory: "256Mi" }
+
+frontend:
+  image: frontend
+  port: 80
+  replicas: 2
+  resources:
+    requests: { cpu: "50m",  memory: "64Mi"  }
+    limits:   { cpu: "200m", memory: "128Mi" }
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+  host: ""  # Leave blank for LoadBalancer IP

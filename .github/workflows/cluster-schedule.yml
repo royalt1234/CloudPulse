@@ -1,0 +1,45 @@
+name: AKS Cluster Schedule
+
+on:
+  schedule:
+    # Start at 08:55 UTC every Monday (approx 5 mins before 9:00 AM)
+    - cron: '55 8 * * 1'
+    # Stop at 11:05 UTC every Monday (approx 5 mins after 11:00 AM)
+    - cron: '5 11 * * 1'
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+
+env:
+  RESOURCE_GROUP: rg-cloudpulse-prod
+  CLUSTER_NAME: cloudpulse
+
+jobs:
+  manage-cluster:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: '{"clientId":"${{ secrets.AZURE_CLIENT_ID }}","clientSecret":"${{ secrets.AZURE_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AZURE_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AZURE_TENANT_ID }}"}'
+
+      - name: Determine Action
+        id: determine
+        run: |
+          # Get current hour and minute in UTC
+          HOUR=$(date +%H)
+          if [ "$HOUR" -lt "10" ]; then
+            echo "action=start" >> $GITHUB_OUTPUT
+          else
+            echo "action=stop" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Start AKS
+        if: steps.determine.outputs.action == 'start'
+        run: |
+          echo "Starting AKS Cluster: ${{ env.CLUSTER_NAME }}..."
+          az aks start --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.CLUSTER_NAME }}
+
+      - name: Stop AKS
+        if: steps.determine.outputs.action == 'stop'
+        run: |
+          echo "Stopping AKS Cluster: ${{ env.CLUSTER_NAME }}..."
+          az aks stop --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.CLUSTER_NAME }}
