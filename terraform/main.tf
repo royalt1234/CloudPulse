@@ -4,7 +4,7 @@ locals {
     Environment = "demo"
     ManagedBy   = "Terraform"
   }
-  acr_name = replace("${var.project_name}acr", "-", "")
+  acr_name = replace("${var.project_name}acr${substr(var.azure_subscription_id, 0, 8)}", "-", "")
 }
 
 # ── Phase 1: Azure Infrastructure ────────────────────────────
@@ -33,18 +33,6 @@ module "acr" {
   depends_on = [module.aks]
 }
 
-module "aws_oidc" {
-  source          = "./modules/aws_oidc"
-  project_name    = var.project_name
-  oidc_issuer_url = module.aks.oidc_issuer_url
-}
-
-module "gcp_oidc" {
-  source          = "./modules/gcp_oidc"
-  project_name    = var.project_name
-  oidc_issuer_url = module.aks.oidc_issuer_url
-}
-
 # ── Phase 2: Build & Push Docker Images ──────────────────────
 
 resource "null_resource" "build_and_push" {
@@ -59,18 +47,17 @@ resource "null_resource" "build_and_push" {
     working_dir = "${path.module}/../"
     command     = "bash scripts/deploy.sh"
     environment = {
-      PROJECT_NAME      = var.project_name
-      IMAGE_TAG         = var.image_tag
-      AZURE_LOCATION    = var.azure_location
-      AZURE_RG          = module.aks.resource_group_name
-      AKS_NAME          = module.aks.cluster_name
-      ACR_SERVER        = module.acr.login_server
-      ACR_USERNAME      = module.acr.admin_username
-      ACR_PASSWORD      = module.acr.admin_password
-      AWS_ROLE_ARN      = module.aws_oidc.role_arn
-      AZURE_CLIENT_ID   = azurerm_user_assigned_identity.workload.client_id
-      GCP_PROVIDER_NAME = module.gcp_oidc.workload_identity_provider_name
-      GCP_SA_EMAIL      = module.gcp_oidc.service_account_email
+      PROJECT_NAME    = var.project_name
+      IMAGE_TAG       = var.image_tag
+      AZURE_LOCATION  = var.azure_location
+      AZURE_RG        = module.aks.resource_group_name
+      AKS_NAME        = module.aks.cluster_name
+      ACR_SERVER      = module.acr.login_server
+      ACR_USERNAME    = module.acr.admin_username
+      ACR_PASSWORD    = module.acr.admin_password
+      AZURE_CLIENT_ID = azurerm_user_assigned_identity.workload.client_id
+      ENTRA_CLIENT_ID = azuread_application.spa.client_id
+      ENTRA_TENANT_ID = var.azure_tenant_id
     }
   }
 }
@@ -124,10 +111,13 @@ resource "azuread_application" "spa" {
   sign_in_audience = "AzureADMyOrg"
 
   single_page_application {
-    # Allow localhost for development and the load balancer for production
+    # Allow localhost for development. Production redirect URI is added dynamically after deployment.
     redirect_uris = [
-      "http://localhost:3000",
-      "http://localhost:5173"
+      "http://localhost:3000/",
+      "http://localhost:5173/",
+      "https://20.93.229.216/",
+      "https://cloudpulse.itclabs.live/",
+      "https://www.cloudpulse.itclabs.live/"
     ]
   }
 
@@ -135,7 +125,7 @@ resource "azuread_application" "spa" {
     resource_app_id = "00000003-0000-0000-c000-000000000000" # Microsoft Graph
 
     resource_access {
-      id   = "e1fe6dd8-ba39-40d6-84-536d0d-1e9-4e5b-9d41-e9ee" # User.Read
+      id   = "e1fe6dd8-ba39-40d6-84d0-0f30c4976e3d" # User.Read
       type = "Scope"
     }
   }
