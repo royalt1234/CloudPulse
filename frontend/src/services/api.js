@@ -13,6 +13,7 @@ async function get(url) {
 export const fetchMetricsSummary  = () => get(`${BASE.metrics}/metrics/summary`)
 export const fetchAWSMetrics      = () => get(`${BASE.metrics}/metrics/aws`)
 export const fetchAzureMetrics    = () => get(`${BASE.metrics}/metrics/azure`)
+export const fetchGCPMetrics      = () => get(`${BASE.metrics}/metrics/gcp`)
 export const fetchMetricHistory   = (id) => get(`${BASE.metrics}/metrics/history/${id}`)
 
 export const fetchAlerts          = (params = {}) => {

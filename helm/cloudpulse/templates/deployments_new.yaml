@@ -21,6 +21,8 @@ spec:
       app: {{ $svc.name }}
   template:
     metadata:
+      annotations:
+        rollout-trigger: {{ randAlphaNum 8 | quote }}
       labels:
         app: {{ $svc.name }}
         azure.workload.identity/use: "true"

@@ -19,6 +19,8 @@
   --aws-dim:  rgba(255,153,0,0.12);
   --azure:    #0078D4;
   --azure-dim:rgba(0,120,212,0.12);
+  --gcp:      #ea4335;
+  --gcp-dim:  rgba(234,67,53,0.12);
 
   --critical:     #FF4757;
   --critical-dim: rgba(255,71,87,0.12);
@@ -40,6 +42,38 @@
 
   --transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
   --font: 'Inter', system-ui, sans-serif;
+  --header-bg: rgba(7,11,22,0.85);
+}
+
+:root[data-theme='light'] {
+  --bg-primary:   #f3f4f6;
+  --bg-secondary: #ffffff;
+  --bg-card:      rgba(0,0,0,0.03);
+  --bg-card-hover:rgba(0,0,0,0.05);
+  --border:       rgba(0,0,0,0.08);
+  --border-focus: rgba(0,0,0,0.18);
+
+  --text-primary:   #111827;
+  --text-secondary: #4b5563;
+  --text-muted:     #9ca3af;
+
+  --aws:      #e67e22;
+  --aws-dim:  rgba(230,126,34,0.12);
+  --azure:    #0078D4;
+  --azure-dim:rgba(0,120,212,0.12);
+  --gcp:      #ea4335;
+  --gcp-dim:  rgba(234,67,53,0.12);
+
+  --critical:     #d63031;
+  --critical-dim: rgba(214,48,49,0.12);
+  --warning:      #f39c12;
+  --warning-dim:  rgba(243,156,18,0.12);
+  --info:         #3867d6;
+  --info-dim:     rgba(56,103,214,0.12);
+  --success:      #20bf6b;
+  --success-dim:  rgba(32,191,107,0.12);
+  
+  --header-bg: rgba(255,255,255,0.85);
 }
 
 html, body, #root {
@@ -65,7 +99,7 @@ html, body, #root {
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 32px;
   height: 64px;
-  background: rgba(7,11,22,0.85);
+  background: var(--header-bg);
   backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border);
 }
@@ -85,6 +119,7 @@ html, body, #root {
 .cloud-tab.active      { color: var(--text-primary); background: var(--bg-card-hover); }
 .cloud-tab.active.aws  { color: var(--aws); background: var(--aws-dim); }
 .cloud-tab.active.azure{ color: var(--azure); background: var(--azure-dim); }
+.cloud-tab.active.gcp  { color: var(--gcp); background: var(--gcp-dim); }
 
 .live-badge { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: var(--success); }
 .live-dot   { width: 7px; height: 7px; border-radius: 50%; background: var(--success); animation: pulse 2s infinite; }
@@ -154,6 +189,7 @@ html, body, #root {
 .resource-cloud-badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; }
 .resource-cloud-badge.aws   { color: var(--aws);   background: var(--aws-dim);   }
 .resource-cloud-badge.azure { color: var(--azure); background: var(--azure-dim); }
+.resource-cloud-badge.gcp   { color: var(--gcp);   background: var(--gcp-dim);   }
 
 .metric-bars { display: flex; flex-direction: column; gap: 5px; }
 .metric-row  { display: flex; align-items: center; gap: 8px; }
@@ -227,4 +263,167 @@ html, body, #root {
   .summary-bar { grid-template-columns: repeat(2,1fr); }
   .cost-grid { grid-template-columns: 1fr; }
   .bottom-row { grid-template-columns: 1fr; }
+}
+
+/* ── Modern Premium Login Page ── */
+.login-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: var(--bg-primary);
+  position: relative;
+  overflow: hidden;
+  padding: 20px;
+  font-family: var(--font);
+}
+
+.login-glow-1, .login-glow-2 {
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  filter: blur(120px);
+  opacity: 0.15;
+  pointer-events: none;
+  z-index: 1;
+}
+
+[data-theme='light'] .login-glow-1, [data-theme='light'] .login-glow-2 {
+  opacity: 0.08;
+}
+
+.login-glow-1 {
+  background: radial-gradient(circle, var(--azure) 0%, transparent 70%);
+  top: -10%;
+  left: -10%;
+  animation: float-glow-1 20s infinite alternate ease-in-out;
+}
+
+.login-glow-2 {
+  background: radial-gradient(circle, var(--aws) 0%, transparent 70%);
+  bottom: -10%;
+  right: -10%;
+  animation: float-glow-2 25s infinite alternate ease-in-out;
+}
+
+@keyframes float-glow-1 {
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(100px, 50px) scale(1.2); }
+}
+
+@keyframes float-glow-2 {
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(-100px, -50px) scale(1.1); }
+}
+
+.login-theme-toggle {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  z-index: 10;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: var(--transition);
+}
+.login-theme-toggle:hover {
+  color: var(--text-primary);
+  background: var(--bg-card-hover);
+  border-color: var(--border-focus);
+  transform: translateY(-1px);
+}
+
+.login-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 48px 40px;
+  text-align: center;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: var(--shadow-lg);
+  z-index: 2;
+  transition: var(--transition);
+}
+.login-card:hover {
+  border-color: var(--border-focus);
+}
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 32px;
+  z-index: 2;
+}
+.login-brand span {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+.login-brand span span {
+  background: linear-gradient(90deg, #60a5fa, #a78bfa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.login-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  letter-spacing: -0.3px;
+}
+
+.login-subtitle {
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 36px;
+}
+
+.login-button {
+  background: var(--azure);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 14px 28px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: var(--font);
+  cursor: pointer;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  transition: var(--transition);
+  box-shadow: 0 4px 12px rgba(0, 120, 212, 0.2);
+}
+.login-button:hover {
+  background: #005a9e;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 120, 212, 0.3);
+}
+.login-button:active {
+  transform: translateY(0);
+}
+
+.login-footer {
+  margin-top: 32px;
+  color: var(--text-muted);
+  font-size: 12px;
+  z-index: 2;
+  letter-spacing: 0.2px;
 }

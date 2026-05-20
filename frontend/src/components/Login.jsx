@@ -1,8 +1,8 @@
 import { useMsal } from "@azure/msal-react";
 import { loginRequest } from "../authConfig";
-import { Activity } from "lucide-react";
+import { Sun, Moon } from "lucide-react";
 
-export default function Login() {
+export default function Login({ theme, onThemeToggle }) {
   const { instance } = useMsal();
 
   const handleLogin = () => {
@@ -12,63 +12,43 @@ export default function Login() {
   };
 
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      minHeight: '100vh',
-      backgroundColor: 'var(--bg-color)',
-      color: 'var(--text-primary)',
-      padding: '20px'
-    }}>
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        marginBottom: '40px'
-      }}>
-        <Activity size={40} color="var(--brand-primary)" />
-        <span style={{ fontSize: '28px', fontWeight: 'bold' }}>CloudPulse</span>
-      </div>
+    <div className="login-container">
+      {/* Floating background glows */}
+      <div className="login-glow-1" />
+      <div className="login-glow-2" />
 
-      <div style={{
-        backgroundColor: 'var(--panel-bg)',
-        border: '1px solid var(--border-color)',
-        borderRadius: '12px',
-        padding: '40px',
-        textAlign: 'center',
-        maxWidth: '400px',
-        width: '100%',
-        boxShadow: '0 8px 24px rgba(0,0,0,0.1)'
-      }}>
-        <h2 style={{ marginBottom: '16px', fontSize: '24px' }}>Welcome Back</h2>
-        <p style={{ color: 'var(--text-secondary)', marginBottom: '32px' }}>
-          Sign in to access your multi-cloud dashboard and insights.
+      {/* Top right theme toggle */}
+      <button 
+        className="login-theme-toggle" 
+        onClick={onThemeToggle}
+        title={theme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
+      >
+        {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+      </button>
+
+      {/* Brand logo & Sign-in card */}
+      <div className="login-card">
+        <div className="login-brand">
+          <svg className="header-logo" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: 42, height: 42 }}>
+            <circle cx="17" cy="17" r="17" fill="url(#grad_login)"/>
+            <path d="M10 20l4-8 3 5 2-3 5 6" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <defs>
+              <linearGradient id="grad_login" x1="0" y1="0" x2="34" y2="34" gradientUnits="userSpaceOnUse">
+                <stop stopColor="#60a5fa"/>
+                <stop offset="1" stopColor="#a78bfa"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <span>Cloud<span>Pulse</span></span>
+        </div>
+
+        <h2 className="login-title">Welcome Back</h2>
+        <p className="login-subtitle">
+          Sign in to access your unified multi-cloud insights and observability dashboard.
         </p>
 
-        <button 
-          onClick={handleLogin}
-          style={{
-            backgroundColor: '#0078D4', // Microsoft Blue
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            padding: '12px 24px',
-            fontSize: '16px',
-            fontWeight: '600',
-            cursor: 'pointer',
-            width: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '12px',
-            transition: 'background-color 0.2s'
-          }}
-          onMouseOver={(e) => e.target.style.backgroundColor = '#005A9E'}
-          onMouseOut={(e) => e.target.style.backgroundColor = '#0078D4'}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 21 21">
+        <button onClick={handleLogin} className="login-button">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 21 21">
             <path fill="#f35325" d="M0 0h10v10H0z"/>
             <path fill="#81bc06" d="M11 0h10v10H11z"/>
             <path fill="#05a6f0" d="M0 11h10v10H0z"/>
@@ -78,7 +58,7 @@ export default function Login() {
         </button>
       </div>
       
-      <p style={{ marginTop: '32px', color: 'var(--text-secondary)', fontSize: '14px' }}>
+      <p className="login-footer">
         Secure enterprise access via Microsoft Entra ID
       </p>
     </div>

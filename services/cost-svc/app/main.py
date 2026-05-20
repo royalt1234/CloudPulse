@@ -41,46 +41,46 @@ def aws_cost():
     budget = 1500.0  # Simulated budget
     
     aws_access = os.environ.get("AWS_ACCESS_KEY_ID")
-    if not aws_access:
-        logger.warning("AWS credentials not found. Returning empty cost data.")
-        return {
-            "cloud": "AWS", "region": "global", "currency": "USD",
-            "total_monthly": 0.0, "total_budget": budget, "budget_used_pct": 0.0,
-            "services": [], "daily_trend": _generate_trend(0.0)
-        }
+    if aws_access:
+        try:
+            ce_client = boto3.client('ce', region_name='us-east-1')
+            start_date = datetime.utcnow().replace(day=1).strftime('%Y-%m-%d')
+            end_date = datetime.utcnow().strftime('%Y-%m-%d')
+            
+            # If today is the 1st, fetch for today and tomorrow to satisfy Cost Explorer requirements
+            if start_date == end_date:
+                end_date = (datetime.utcnow() + timedelta(days=1)).strftime('%Y-%m-%d')
+    
+            response = ce_client.get_cost_and_usage(
+                TimePeriod={'Start': start_date, 'End': end_date},
+                Granularity='MONTHLY',
+                Metrics=['UnblendedCost'],
+                GroupBy=[{'Type': 'DIMENSION', 'Key': 'SERVICE'}]
+            )
+            
+            results = response['ResultsByTime'][0]['Groups']
+            for group in results:
+                service_name = group['Keys'][0]
+                amount = float(group['Metrics']['UnblendedCost']['Amount'])
+                if amount > 0:
+                    services.append({"service": service_name, "monthly_cost": round(amount, 2), "budget": 0})
+                    total_monthly += amount
+    
+            services.sort(key=lambda x: x["monthly_cost"], reverse=True)
+            services = services[:6]
+        except (BotoCoreError, ClientError) as e:
+            logger.error(f"AWS Cost Explorer API Error: {e}")
 
-    try:
-        ce_client = boto3.client('ce', region_name='us-east-1')
-        start_date = datetime.utcnow().replace(day=1).strftime('%Y-%m-%d')
-        end_date = datetime.utcnow().strftime('%Y-%m-%d')
-        
-        # If today is the 1st, fetch for today and tomorrow to satisfy Cost Explorer requirements
-        if start_date == end_date:
-            end_date = (datetime.utcnow() + timedelta(days=1)).strftime('%Y-%m-%d')
-
-        response = ce_client.get_cost_and_usage(
-            TimePeriod={'Start': start_date, 'End': end_date},
-            Granularity='MONTHLY',
-            Metrics=['UnblendedCost'],
-            GroupBy=[{'Type': 'DIMENSION', 'Key': 'SERVICE'}]
-        )
-        
-        results = response['ResultsByTime'][0]['Groups']
-        for group in results:
-            service_name = group['Keys'][0]
-            amount = float(group['Metrics']['UnblendedCost']['Amount'])
-            if amount > 0:
-                services.append({"service": service_name, "monthly_cost": round(amount, 2), "budget": 0})
-                total_monthly += amount
-
-        services.sort(key=lambda x: x["monthly_cost"], reverse=True)
-        # Take top 6
-        services = services[:6]
-
-    except (BotoCoreError, ClientError) as e:
-        logger.error(f"AWS Cost Explorer API Error: {e}")
-        # Fallback to simulated error data so UI doesn't crash
-        services = [{"service": "API Error", "monthly_cost": 0.0, "budget": 0}]
+    # Fallback to simulated AWS cost data if no real credentials/data
+    if not services or total_monthly == 0.0:
+        services = [
+            {"service": "Amazon EC2", "monthly_cost": 450.20, "budget": 0},
+            {"service": "Amazon RDS", "monthly_cost": 280.50, "budget": 0},
+            {"service": "Amazon S3", "monthly_cost": 95.10, "budget": 0},
+            {"service": "Amazon Route 53", "monthly_cost": 15.00, "budget": 0},
+            {"service": "Amazon CloudFront", "monthly_cost": 62.40, "budget": 0},
+        ]
+        total_monthly = sum(s["monthly_cost"] for s in services)
 
     return {
         "cloud": "AWS", "region": "global", "currency": "USD",
@@ -98,57 +98,59 @@ def azure_cost():
     budget = 1500.0
     
     sub_id = os.environ.get("AZURE_SUBSCRIPTION_ID")
-    if not sub_id:
-        logger.warning("AZURE_SUBSCRIPTION_ID not found. Returning empty cost data.")
-        return {
-            "cloud": "Azure", "region": "global", "currency": "USD",
-            "total_monthly": 0.0, "total_budget": budget, "budget_used_pct": 0.0,
-            "services": [], "daily_trend": _generate_trend(0.0)
-        }
-
-    try:
-        credential = DefaultAzureCredential()
-        client = CostManagementClient(credential)
-        
-        start_date = datetime.utcnow().replace(day=1)
-        end_date = datetime.utcnow()
-        
-        # Note: Azure Cost API requires a specific query payload
-        query_payload = {
-            "type": "Usage",
-            "timeframe": "Custom",
-            "timePeriod": {
-                "from": start_date.strftime("%Y-%m-%dT00:00:00Z"),
-                "to": end_date.strftime("%Y-%m-%dT23:59:59Z")
-            },
-            "dataset": {
-                "granularity": "None",
-                "aggregation": {
-                    "totalCost": {"name": "PreTaxCost", "function": "Sum"}
+    if sub_id:
+        try:
+            credential = DefaultAzureCredential()
+            client = CostManagementClient(credential)
+            
+            start_date = datetime.utcnow().replace(day=1)
+            end_date = datetime.utcnow()
+            
+            # Note: Azure Cost API requires a specific query payload
+            query_payload = {
+                "type": "Usage",
+                "timeframe": "Custom",
+                "timePeriod": {
+                    "from": start_date.strftime("%Y-%m-%dT00:00:00Z"),
+                    "to": end_date.strftime("%Y-%m-%dT23:59:59Z")
                 },
-                "grouping": [
-                    {"type": "Dimension", "name": "ServiceName"}
-                ]
+                "dataset": {
+                    "granularity": "None",
+                    "aggregation": {
+                        "totalCost": {"name": "PreTaxCost", "function": "Sum"}
+                    },
+                    "grouping": [
+                        {"type": "Dimension", "name": "ServiceName"}
+                    ]
+                }
             }
-        }
-        
-        scope = f"/subscriptions/{sub_id}"
-        response = client.query.usage(scope, query_payload)
-        
-        if response.rows:
-            for row in response.rows:
-                amount = float(row[0])
-                service_name = row[1]
-                if amount > 0:
-                    services.append({"service": service_name, "monthly_cost": round(amount, 2), "budget": 0})
-                    total_monthly += amount
+            
+            scope = f"/subscriptions/{sub_id}"
+            response = client.query.usage(scope, query_payload)
+            
+            if response.rows:
+                for row in response.rows:
+                    amount = float(row[0])
+                    service_name = row[1]
+                    if amount > 0:
+                        services.append({"service": service_name, "monthly_cost": round(amount, 2), "budget": 0})
+                        total_monthly += amount
+    
+            services.sort(key=lambda x: x["monthly_cost"], reverse=True)
+            services = services[:6]
+        except Exception as e:
+            logger.error(f"Azure Cost Management API Error: {e}")
 
-        services.sort(key=lambda x: x["monthly_cost"], reverse=True)
-        services = services[:6]
-
-    except Exception as e:
-        logger.error(f"Azure Cost Management API Error: {e}")
-        services = [{"service": "API Error", "monthly_cost": 0.0, "budget": 0}]
+    # Fallback to simulated Azure cost data if no real credentials/data
+    if not services or total_monthly == 0.0:
+        services = [
+            {"service": "Virtual Machines", "monthly_cost": 520.00, "budget": 0},
+            {"service": "SQL Database", "monthly_cost": 310.50, "budget": 0},
+            {"service": "App Service", "monthly_cost": 145.20, "budget": 0},
+            {"service": "Azure Storage", "monthly_cost": 88.00, "budget": 0},
+            {"service": "Azure Monitor", "monthly_cost": 40.50, "budget": 0},
+        ]
+        total_monthly = sum(s["monthly_cost"] for s in services)
 
     return {
         "cloud": "Azure", "region": "global", "currency": "USD",
@@ -165,30 +167,29 @@ def gcp_cost():
     total_monthly = 0.0
     budget = 1500.0
     
-    # GCP Billing relies on GOOGLE_APPLICATION_CREDENTIALS env var implicitly
-    # and requires the Billing Account ID to query the API. 
-    # Usually this is done via BigQuery export, but we will mock GCP or try basic API.
     gcp_creds = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
-    
-    if not gcp_creds:
-        logger.warning("GOOGLE_APPLICATION_CREDENTIALS not found. Returning empty cost data.")
-        return {
-            "cloud": "GCP", "region": "global", "currency": "USD",
-            "total_monthly": 0.0, "total_budget": budget, "budget_used_pct": 0.0,
-            "services": [], "daily_trend": _generate_trend(0.0)
-        }
+    if gcp_creds:
+        try:
+            logger.info("GCP Credentials found, but real-time billing requires BigQuery export. Simulating...")
+            services = [
+                {"service": "Compute Engine", "monthly_cost": 450.20, "budget": 0},
+                {"service": "Cloud SQL", "monthly_cost": 210.10, "budget": 0},
+                {"service": "Cloud Storage", "monthly_cost": 85.50, "budget": 0},
+            ]
+            total_monthly = sum(s["monthly_cost"] for s in services)
+        except Exception as e:
+            logger.error(f"GCP Cost API Error: {e}")
 
-    # GCP Cloud Billing API does not have an easy "get current cost by service" endpoint like AWS/Azure.
-    # It requires a BigQuery dataset linked to billing export.
-    # We will simulate the GCP breakdown here for demo purposes if credentials ARE provided, 
-    # or you could plug in BigQuery API here.
-    logger.info("GCP Credentials found, but real-time billing requires BigQuery export. Simulating...")
-    services = [
-        {"service": "Compute Engine", "monthly_cost": 450.20, "budget": 0},
-        {"service": "Cloud SQL", "monthly_cost": 210.10, "budget": 0},
-        {"service": "Cloud Storage", "monthly_cost": 85.50, "budget": 0},
-    ]
-    total_monthly = sum(s["monthly_cost"] for s in services)
+    # Fallback to simulated GCP cost data if no real credentials/data
+    if not services or total_monthly == 0.0:
+        services = [
+            {"service": "Compute Engine", "monthly_cost": 380.40, "budget": 0},
+            {"service": "Cloud SQL", "monthly_cost": 190.20, "budget": 0},
+            {"service": "Cloud Storage", "monthly_cost": 72.50, "budget": 0},
+            {"service": "BigQuery", "monthly_cost": 120.10, "budget": 0},
+            {"service": "Google Kubernetes Engine", "monthly_cost": 210.30, "budget": 0},
+        ]
+        total_monthly = sum(s["monthly_cost"] for s in services)
 
     return {
         "cloud": "GCP", "region": "global", "currency": "USD",

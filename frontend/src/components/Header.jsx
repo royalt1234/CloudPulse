@@ -1,7 +1,7 @@
-import { RefreshCw, LogOut } from 'lucide-react'
+import { RefreshCw, LogOut, Sun, Moon } from 'lucide-react'
 import { useMsal } from '@azure/msal-react'
 
-export default function Header({ lastUpdated, cloudFilter, onCloudChange, error }) {
+export default function Header({ lastUpdated, cloudFilter, onCloudChange, error, theme, onThemeToggle }) {
   const { instance } = useMsal();
   const fmt = (d) => d ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—'
 
@@ -30,7 +30,7 @@ export default function Header({ lastUpdated, cloudFilter, onCloudChange, error 
         )}
 
         <div className="cloud-tabs">
-          {[['both','All Clouds'],['aws','AWS'],['azure','Azure']].map(([v, label]) => (
+          {[['both','All Clouds'],['aws','AWS'],['azure','Azure'],['gcp','GCP']].map(([v, label]) => (
             <button
               key={v}
               className={`cloud-tab ${cloudFilter === v ? 'active ' + v : ''}`}
@@ -50,6 +50,23 @@ export default function Header({ lastUpdated, cloudFilter, onCloudChange, error 
           <RefreshCw size={11} style={{ marginRight: 4, verticalAlign: 'middle' }} />
           {fmt(lastUpdated)}
         </span>
+
+        <button 
+          onClick={onThemeToggle}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            color: 'var(--text-secondary)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            marginLeft: '16px'
+          }}
+          title={theme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
+        >
+          {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+        </button>
 
         <button 
           onClick={() => instance.logoutRedirect()}

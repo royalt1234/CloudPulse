@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Header from './components/Header.jsx'
 import Dashboard from './components/Dashboard.jsx'
 import {
-  fetchMetricsSummary, fetchAWSMetrics, fetchAzureMetrics,
+  fetchMetricsSummary, fetchAWSMetrics, fetchAzureMetrics, fetchGCPMetrics,
   fetchAlerts, fetchTotalCost, fetchAWSCost, fetchAzureCost, fetchGCPCost
 } from './services/api.js'
 import { useIsAuthenticated } from "@azure/msal-react";
@@ -15,21 +15,30 @@ export default function App() {
   const [lastUpdated, setLast]    = useState(null)
   const [cloudFilter, setCloud]   = useState('both')
   const [error, setError]         = useState(null)
+  const [theme, setTheme]         = useState(() => localStorage.getItem('theme') || 'dark')
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('theme', theme)
+  }, [theme])
+
+  const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark')
 
   const refresh = useCallback(async () => {
     try {
-      const [summary, awsMetrics, azureMetrics, alerts, totalCost, awsCost, azureCost, gcpCost] =
+      const [summary, awsMetrics, azureMetrics, gcpMetrics, alerts, totalCost, awsCost, azureCost, gcpCost] =
         await Promise.all([
           fetchMetricsSummary(),
           fetchAWSMetrics(),
           fetchAzureMetrics(),
+          fetchGCPMetrics(),
           fetchAlerts(),
           fetchTotalCost(),
           fetchAWSCost(),
           fetchAzureCost(),
           fetchGCPCost()
         ])
-      setData({ summary, awsMetrics, azureMetrics, alerts, totalCost, awsCost, azureCost, gcpCost })
+      setData({ summary, awsMetrics, azureMetrics, gcpMetrics, alerts, totalCost, awsCost, azureCost, gcpCost })
       setLast(new Date())
       setLoading(false)
       setError(null)
@@ -46,7 +55,7 @@ export default function App() {
   }, [refresh])
 
   if (!isAuthenticated) {
-    return <Login />
+    return <Login theme={theme} onThemeToggle={toggleTheme} />
   }
 
   return (
@@ -56,6 +65,8 @@ export default function App() {
         cloudFilter={cloudFilter}
         onCloudChange={setCloud}
         error={error}
+        theme={theme}
+        onThemeToggle={toggleTheme}
       />
       <Dashboard data={data} loading={loading} cloudFilter={cloudFilter} onRefresh={refresh} />
     </div>

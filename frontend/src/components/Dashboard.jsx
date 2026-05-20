@@ -14,11 +14,12 @@ function StatCard({ label, value, sub, className = '' }) {
 }
 
 export default function Dashboard({ data, loading, cloudFilter }) {
-  const { summary, awsMetrics = [], azureMetrics = [], alerts, totalCost, awsCost, azureCost, gcpCost } = data
+  const { summary, awsMetrics = [], azureMetrics = [], gcpMetrics = [], alerts, totalCost, awsCost, azureCost, gcpCost } = data
 
   const resources = [
     ...(cloudFilter !== 'azure' && cloudFilter !== 'gcp' ? awsMetrics   : []),
     ...(cloudFilter !== 'aws'   && cloudFilter !== 'gcp' ? azureMetrics : []),
+    ...(cloudFilter !== 'aws'   && cloudFilter !== 'azure' ? gcpMetrics : []),
   ]
 
   return (
@@ -28,7 +29,7 @@ export default function Dashboard({ data, loading, cloudFilter }) {
         <StatCard
           label="Total Resources"
           value={summary?.total_resources ?? (loading ? '…' : '—')}
-          sub={`${summary?.aws_resources ?? 0} AWS · ${summary?.azure_resources ?? 0} Azure`}
+          sub={`${summary?.aws_resources ?? 0} AWS · ${summary?.azure_resources ?? 0} Azure · ${summary?.gcp_resources ?? 0} GCP`}
         />
         <StatCard
           label="Avg CPU"
