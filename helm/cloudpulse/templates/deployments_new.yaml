@@ -1,0 +1,55 @@
+{{- $services := list
+  (dict "name" "metrics-svc" "image" .Values.metricsSvc.image "port" .Values.metricsSvc.port "replicas" .Values.metricsSvc.replicas "resources" .Values.metricsSvc.resources)
+  (dict "name" "alerts-svc"  "image" .Values.alertsSvc.image  "port" .Values.alertsSvc.port  "replicas" .Values.alertsSvc.replicas  "resources" .Values.alertsSvc.resources)
+  (dict "name" "cost-svc"    "image" .Values.costSvc.image    "port" .Values.costSvc.port    "replicas" .Values.costSvc.replicas    "resources" .Values.costSvc.resources)
+  (dict "name" "frontend"    "image" .Values.frontend.image   "port" .Values.frontend.port   "replicas" .Values.frontend.replicas   "resources" .Values.frontend.resources)
+-}}
+{{- range $svc := $services }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $svc.name }}
+  namespace: {{ $.Values.namespace }}
+  labels:
+    app: {{ $svc.name }}
+    {{- include "cloudpulse.labels" $ | nindent 4 }}
+spec:
+  replicas: {{ $svc.replicas }}
+  selector:
+    matchLabels:
+      app: {{ $svc.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ $svc.name }}
+        azure.workload.identity/use: "true"
+        {{- include "cloudpulse.labels" $ | nindent 8 }}
+    spec:
+      serviceAccountName: cloudpulse-sa
+      {{- with $.Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ $svc.name }}
+          image: {{ include "cloudpulse.image" (dict "ctx" $ "image" $svc.image) }}
+          imagePullPolicy: Always
+          ports:
+            - containerPort: {{ $svc.port }}
+          resources:
+            {{- toYaml $svc.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: {{ $svc.port }}
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ $svc.port }}
+            initialDelaySeconds: 15
+            periodSeconds: 10
+      terminationGracePeriodSeconds: 30
+{{- end }}

@@ -20,6 +20,16 @@ fail() { echo -e "\033[1;31m[✗]\033[0m $*" >&2; exit 1; }
 : "${PROJECT_NAME:?}" "${IMAGE_TAG:?}"
 : "${AZURE_RG:?}"  "${AKS_NAME:?}" "${ACR_SERVER:?}" "${ACR_USERNAME:?}" "${ACR_PASSWORD:?}"
 
+# ── Auto-generate frontend .env from Terraform outputs ────────
+if [ -n "${ENTRA_CLIENT_ID:-}" ] && [ -n "${ENTRA_TENANT_ID:-}" ]; then
+  log "Writing frontend/.env with Entra ID credentials..."
+  cat > "$ROOT_DIR/frontend/.env" <<EOF
+VITE_AZURE_CLIENT_ID=${ENTRA_CLIENT_ID}
+VITE_AZURE_TENANT_ID=${ENTRA_TENANT_ID}
+EOF
+  ok "frontend/.env updated"
+fi
+
 # ── Build & push to ACR ───────────────────────────────────────
 log "Authenticating with ACR..."
 echo "$ACR_PASSWORD" | docker login "$ACR_SERVER" \
@@ -49,7 +59,7 @@ helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
   --kube-context aks-cloudpulse \
   --namespace ingress-nginx --create-namespace \
   --set controller.service.type=LoadBalancer \
-  --wait --timeout 5m
+  --wait --timeout 20m
 
 log "Deploying CloudPulse Helm chart to AKS..."
 helm upgrade --install cloudpulse "$HELM_CHART" \
@@ -59,10 +69,7 @@ helm upgrade --install cloudpulse "$HELM_CHART" \
   --set global.imageRegistry="$ACR_SERVER/$PROJECT_NAME" \
   --set global.imageTag="$IMAGE_TAG" \
   --set global.azureClientId="$AZURE_CLIENT_ID" \
-  --set costSvc.awsRoleArn="$AWS_ROLE_ARN" \
-  --set costSvc.gcpProviderName="$GCP_PROVIDER_NAME" \
-  --set costSvc.gcpServiceAccount="$GCP_SA_EMAIL" \
-  --wait --timeout 8m
+  --wait --timeout 20m
 
 # ── Wait for LoadBalancer IP and write URL file ────────────────
 log "Waiting for LoadBalancer IP..."

@@ -1,0 +1,161 @@
+<mxfile host="65bd71144e">
+    <diagram id="CloudPulseArch" name="CloudPulse 4-Layer Architecture">
+        <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" background="#F8F9FA" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                
+                <!-- Title Block -->
+                <mxCell id="title" value="CloudPulse: Standalone Azure Production Architecture &amp; Lifecycle" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#107C41;strokeColor=#0B592E;fontColor=#FFFFFF;fontSize=18;fontStyle=1;align=center;" vertex="1" parent="1">
+                    <mxGeometry x="40" y="30" width="1090" height="60" as="geometry"/>
+                </mxCell>
+
+                <!-- ================= LAYER 1: AUTOMATION ================= -->
+                <mxCell id="layer1" value="Layer 1: Automation (Control Plane)" style="swimlane;whiteSpace=wrap;html=1;fillColor=#E8F5E9;strokeColor=#81C784;startSize=30;fontStyle=1;fontColor=#2E7D32;fontSize=13;" vertex="1" parent="1">
+                    <mxGeometry x="40" y="110" width="250" height="650" as="geometry"/>
+                </mxCell>
+                <mxCell id="gha" value="GitHub Actions" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#24292F;strokeColor=#1B1F23;fontColor=#FFFFFF;fontStyle=1;fontSize=13;" vertex="1" parent="layer1">
+                    <mxGeometry x="20" y="50" width="210" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="deploy_wf" value="deploy.yml&#xa;(Terraform + Helm Pipeline)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ECEFF1;strokeColor=#B0BEC5;fontColor=#37474F;fontStyle=1;" vertex="1" parent="layer1">
+                    <mxGeometry x="20" y="150" width="210" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="sched_wf" value="cluster-schedule.yml&#xa;(Mon Start/Stop Cron)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ECEFF1;strokeColor=#B0BEC5;fontColor=#37474F;fontStyle=1;" vertex="1" parent="layer1">
+                    <mxGeometry x="20" y="240" width="210" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="secrets" value="GitHub Repository Secrets&#xa;(Azure Credentials)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ECEFF1;strokeColor=#B0BEC5;fontColor=#37474F;fontStyle=1;" vertex="1" parent="layer1">
+                    <mxGeometry x="20" y="330" width="210" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="mon_schedule_note" value="FinOps Savings:&#xa;Scheduled cluster&#xa;shutdown cuts compute&#xa;costs by 98%!" style="shape=note;whiteSpace=wrap;html=1;size=15;fillColor=#FFFDE7;strokeColor=#FFF59D;fontColor=#F57F17;fontSize=11;align=left;" vertex="1" parent="layer1">
+                    <mxGeometry x="20" y="440" width="210" height="100" as="geometry"/>
+                </mxCell>
+
+                <!-- ================= LAYER 2: INFRASTRUCTURE ================= -->
+                <mxCell id="layer2" value="Layer 2: Infrastructure (Azure Foundation)" style="swimlane;whiteSpace=wrap;html=1;fillColor=#E1F5FE;strokeColor=#4FC3F7;startSize=30;fontStyle=1;fontColor=#0277BD;fontSize=13;" vertex="1" parent="1">
+                    <mxGeometry x="310" y="110" width="260" height="650" as="geometry"/>
+                </mxCell>
+                <mxCell id="rg" value="Azure Resource Group (rg-cloudpulse-prod)" style="swimlane;whiteSpace=wrap;html=1;fillColor=#F1F8E9;strokeColor=#9CCC65;startSize=25;fontStyle=1;fontColor=#33691E;" vertex="1" parent="layer2">
+                    <mxGeometry x="15" y="50" width="230" height="570" as="geometry"/>
+                </mxCell>
+                <mxCell id="aks" value="AKS Cluster&#xa;(cloudpulse-aks)&#xa;[Standard_B2s Node]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0078D4;strokeColor=#005A9E;fontColor=#FFFFFF;fontStyle=1;" vertex="1" parent="rg">
+                    <mxGeometry x="15" y="45" width="200" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="acr" value="Azure Registry (ACR)&#xa;(cloudpulseacr...)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0078D4;strokeColor=#005A9E;fontColor=#FFFFFF;fontStyle=1;" vertex="1" parent="rg">
+                    <mxGeometry x="15" y="150" width="200" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="identity" value="Managed Identity&#xa;(Identity Bridge)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0078D4;strokeColor=#005A9E;fontColor=#FFFFFF;fontStyle=1;" vertex="1" parent="rg">
+                    <mxGeometry x="15" y="245" width="200" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="tfstate" value="Terraform Remote State&#xa;(Azure Storage Account)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ECEFF1;strokeColor=#B0BEC5;fontColor=#37474F;" vertex="1" parent="rg">
+                    <mxGeometry x="15" y="340" width="200" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="vnet" value="Virtual Network (VNet)&#xa;[Isolated Address Space]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ECEFF1;strokeColor=#B0BEC5;fontColor=#37474F;" vertex="1" parent="rg">
+                    <mxGeometry x="15" y="435" width="200" height="60" as="geometry"/>
+                </mxCell>
+
+                <!-- ================= LAYER 3: SECURITY & IDENTITY ================= -->
+                <mxCell id="layer3" value="Layer 3: Security &amp; Identity (Zero-Trust)" style="swimlane;whiteSpace=wrap;html=1;fillColor=#F3E5F5;strokeColor=#BA68C8;startSize=30;fontStyle=1;fontColor=#6A1B9A;fontSize=13;" vertex="1" parent="1">
+                    <mxGeometry x="590" y="110" width="260" height="650" as="geometry"/>
+                </mxCell>
+                <mxCell id="entra" value="Microsoft Entra ID (SSO)&#xa;(App: cloudpulse-spa)&#xa;[Strict SPA Platform URIs]&#xa;https://20.93.229.216/" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFEBEE;strokeColor=#EF5350;fontColor=#C62828;fontStyle=1;" vertex="1" parent="layer3">
+                    <mxGeometry x="20" y="50" width="220" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="oidc" value="OIDC Workload Identity&#xa;(Zero-Secret Trust Hub)&#xa;[K8s ServiceAccount Token]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#EDE7F6;strokeColor=#9575CD;fontColor=#4527A0;fontStyle=1;" vertex="1" parent="layer3">
+                    <mxGeometry x="20" y="180" width="220" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="mock_telemetry" value="Interactive Mock Engine&#xa;(Multi-Cloud Fallback)&#xa;[Dynamic AWS &amp; GCP telemetry]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFF3E0;strokeColor=#FFB74D;fontColor=#E65100;fontStyle=1;" vertex="1" parent="layer3">
+                    <mxGeometry x="20" y="300" width="220" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="sso_note" value="SSO Strictness:&#xa;Redirect URI registered&#xa;strictly under SPA in Entra ID.&#xa;Trailing slash '/' mandatory." style="shape=note;whiteSpace=wrap;html=1;size=15;fillColor=#EFEBE9;strokeColor=#BCAAA4;fontColor=#4E342E;fontSize=11;align=left;" vertex="1" parent="layer3">
+                    <mxGeometry x="20" y="440" width="220" height="100" as="geometry"/>
+                </mxCell>
+
+                <!-- ================= LAYER 4: RUNTIME (K8S) ================= -->
+                <mxCell id="layer4" value="Layer 4: K8s Runtime (cloudpulse ns)" style="swimlane;whiteSpace=wrap;html=1;fillColor=#FFF3E0;strokeColor=#FFB74D;startSize=30;fontStyle=1;fontColor=#E65100;fontSize=13;" vertex="1" parent="1">
+                    <mxGeometry x="870" y="110" width="260" height="650" as="geometry"/>
+                </mxCell>
+                <mxCell id="ingress" value="Nginx Ingress Controller&#xa;(HTTPS Load Balancer)&#xa;[https://20.93.229.216/]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8E8E8;strokeColor=#A8A8A8;fontColor=#333333;fontStyle=1;" vertex="1" parent="layer4">
+                    <mxGeometry x="20" y="50" width="220" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="frontend_pod" value="frontend Pod&#xa;(React + Vite + MSAL SSO)&#xa;[Mapping Data-Bridge]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E8F8F5;strokeColor=#A3E4D7;fontColor=#117864;fontStyle=1;" vertex="1" parent="layer4">
+                    <mxGeometry x="20" y="145" width="220" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="metrics_pod" value="metrics-svc Pod&#xa;(FastAPI — Azure Monitor)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FDF2E9;strokeColor=#F5CBA7;fontColor=#A04000;fontStyle=1;" vertex="1" parent="layer4">
+                    <mxGeometry x="20" y="250" width="220" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="alerts_pod" value="alerts-svc Pod&#xa;(FastAPI — Azure Alerts)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FDF2E9;strokeColor=#F5CBA7;fontColor=#A04000;fontStyle=1;" vertex="1" parent="layer4">
+                    <mxGeometry x="20" y="345" width="220" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="cost_pod" value="cost-svc Pod&#xa;(FastAPI — Azure Costs +\nAWS/GCP Mock Fallbacks)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FDF2E9;strokeColor=#F5CBA7;fontColor=#A04000;fontStyle=1;" vertex="1" parent="layer4">
+                    <mxGeometry x="20" y="440" width="220" height="85" as="geometry"/>
+                </mxCell>
+                <mxCell id="transform_note" value="App.jsx Data-Bridge:&#xa;Maps flat metrics/alerts&#xa;payloads to React schema.&#xa;Protects UI from crashes." style="shape=note;whiteSpace=wrap;html=1;size=15;fillColor=#E0F2F1;strokeColor=#80CBC4;fontColor=#004D40;fontSize=11;align=left;" vertex="1" parent="layer4">
+                    <mxGeometry x="20" y="540" width="220" height="95" as="geometry"/>
+                </mxCell>
+
+                <!-- ================= CONNECTIONS ================= -->
+                <!-- deploy_wf -> rg / aks -->
+                <mxCell id="conn_deploy_aks" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4FC3F7;strokeWidth=2;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="deploy_wf" target="aks">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array points="270,290;270,315"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <!-- sched_wf -> aks (mon start/stop) -->
+                <mxCell id="conn_sched_aks" value="Start/Stop" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#EF5350;strokeWidth=2;entryX=0;entryY=0.25;entryDx=0;entryDy=0;fontSize=10;fontColor=#C62828;" edge="1" parent="1" source="sched_wf" target="aks">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array points="290,380;290,298"/>
+                    </mxGeometry>
+                </mxCell>
+
+                <!-- ingress -> frontend_pod -->
+                <mxCell id="conn_ing_front" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#78909C;strokeWidth=2;" edge="1" parent="1" source="ingress" target="frontend_pod">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+
+                <!-- frontend_pod -> entra (Msal SSO validation) -->
+                <mxCell id="conn_front_entra" value="MSAL Auth Flow" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#EF5350;strokeWidth=2;exitX=0;exitY=0.25;entryX=1;entryY=0.5;exitDx=0;exitDy=0;entryDx=0;entryDy=0;fontSize=10;fontColor=#C62828;" edge="1" parent="1" source="frontend_pod" target="entra">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array points="850,275;850,205"/>
+                    </mxGeometry>
+                </mxCell>
+
+                <!-- frontend_pod -> metrics/alerts/cost APIs -->
+                <mxCell id="conn_front_metrics" value="API Query" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4DB6AC;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;exitDx=0;exitDy=0;entryDx=0;entryDy=0;fontSize=10;fontColor=#004D40;" edge="1" parent="1" source="frontend_pod" target="metrics_pod">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="conn_front_alerts" value="API Query" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4DB6AC;strokeWidth=2;exitX=0.25;exitY=1;entryX=0.25;entryY=0;exitDx=0;exitDy=0;entryDx=0;entryDy=0;fontSize=10;fontColor=#004D40;" edge="1" parent="1" source="frontend_pod" target="alerts_pod">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="conn_front_cost" value="API Query" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#4DB6AC;strokeWidth=2;exitX=0.75;exitY=1;entryX=0.75;entryY=0;exitDx=0;exitDy=0;entryDx=0;entryDy=0;fontSize=10;fontColor=#004D40;" edge="1" parent="1" source="frontend_pod" target="cost_pod">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+
+                <!-- pods -> Managed Identity (Azure credentials discovery) -->
+                <mxCell id="conn_metrics_identity" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#0277BD;strokeWidth=1.5;exitX=0;exitY=0.5;entryX=1;entryY=0.25;exitDx=0;exitDy=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="metrics_pod" target="identity">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array points="850,395;850,400"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="conn_alerts_identity" value="AKS Workload Identity" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#0277BD;strokeWidth=1.5;exitX=0;exitY=0.5;entryX=1;entryY=0.5;exitDx=0;exitDy=0;entryDx=0;entryDy=0;fontSize=9;fontColor=#0277BD;" edge="1" parent="1" source="alerts_pod" target="identity">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array points="850,490;850,415"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="conn_cost_identity" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#0277BD;strokeWidth=1.5;exitX=0;exitY=0.5;entryX=1;entryY=0.75;exitDx=0;exitDy=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="cost_pod" target="identity">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array points="850,593;850,430"/>
+                    </mxGeometry>
+                </mxCell>
+
+                <!-- cost_pod -> mock_telemetry (fallbacks) -->
+                <mxCell id="conn_cost_mock" value="Dynamic Fallbacks" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#FFB74D;strokeWidth=2;exitX=0;exitY=0.75;entryX=1;entryY=0.75;exitDx=0;exitDy=0;entryDx=0;entryDy=0;fontSize=10;fontColor=#E65100;" edge="1" parent="1" source="cost_pod" target="mock_telemetry">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array points="840,614;840,478"/>
+                    </mxGeometry>
+                </mxCell>
+
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

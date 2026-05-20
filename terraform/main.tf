@@ -115,7 +115,7 @@ resource "azuread_application" "spa" {
     redirect_uris = [
       "http://localhost:3000/",
       "http://localhost:5173/",
-      "https://20.93.229.216/",
+      "https://20.54.205.56/",
       "https://cloudpulse.itclabs.live/",
       "https://www.cloudpulse.itclabs.live/"
     ]

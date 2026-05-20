@@ -6,10 +6,13 @@ import './index.css'
 import { MsalProvider } from '@azure/msal-react'
 import { msalInstance } from './authConfig'
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <MsalProvider instance={msalInstance}>
-      <App />
-    </MsalProvider>
-  </React.StrictMode>
-)
+// Initialize MSAL v3 before rendering the application
+msalInstance.initialize().then(() => {
+  ReactDOM.createRoot(document.getElementById('root')).render(
+    <React.StrictMode>
+      <MsalProvider instance={msalInstance}>
+        <App />
+      </MsalProvider>
+    </React.StrictMode>
+  )
+})
