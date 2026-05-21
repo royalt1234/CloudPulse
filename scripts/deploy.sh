@@ -61,6 +61,17 @@ helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
   --set controller.service.type=LoadBalancer \
   --wait --timeout 20m
 
+log "Installing cert-manager..."
+helm repo add jetstack https://charts.jetstack.io 2>/dev/null || true
+helm repo update jetstack
+helm upgrade --install cert-manager jetstack/cert-manager \
+  --kube-context aks-cloudpulse \
+  --namespace cert-manager --create-namespace \
+  --set crds.enabled=true \
+  --set global.helm.enableServerSideApply=false \
+  --wait --timeout 5m || log "cert-manager already installed, skipping..."
+ok "cert-manager ready"
+
 log "Deploying CloudPulse Helm chart to AKS..."
 helm upgrade --install cloudpulse "$HELM_CHART" \
   --kube-context aks-cloudpulse \
@@ -100,5 +111,6 @@ AZURE_IP=$(get_lb_ip aks-cloudpulse)
 printf '%s' "$AZURE_IP" > "$ROOT_DIR/.azure_url"
 
 ok "============================================"
-ok "Dashboard → http://$AZURE_IP"
+ok "Dashboard → https://cloudpulse.itclabs.live"
+ok "IP Address → $AZURE_IP"
 ok "============================================"

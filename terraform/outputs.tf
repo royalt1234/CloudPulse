@@ -1,6 +1,6 @@
 output "azure_dashboard_url" {
   description = "CloudPulse dashboard URL on Azure (AKS)"
-  value       = "http://${trimspace(data.local_file.azure_url.content)}"
+  value       = "https://cloudpulse.itclabs.live"
 }
 
 output "aks_cluster_name" {

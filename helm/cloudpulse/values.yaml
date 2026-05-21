@@ -48,4 +48,9 @@ ingress:
   annotations:
     nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
-  host: ""  # Leave blank for LoadBalancer IP
+  host: "cloudpulse.itclabs.live"
+  tls:
+    enabled: true
+    secretName: "cloudpulse-tls"
+    acmeEmail: "admin@itclabs.live"
+

@@ -10,7 +10,25 @@ metadata:
     {{- toYaml .Values.ingress.annotations | nindent 4 }}
 spec:
   ingressClassName: {{ .Values.ingress.className }}
+  {{- if and .Values.ingress.tls .Values.ingress.tls.enabled .Values.ingress.host }}
+  tls:
+    - hosts:
+        - {{ .Values.ingress.host }}
+      secretName: {{ .Values.ingress.tls.secretName | default "cloudpulse-tls" }}
+  {{- end }}
   rules:
+    {{- if .Values.ingress.host }}
+    - host: {{ .Values.ingress.host }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: {{ .Values.frontend.port }}
+    {{- else }}
     - http:
         paths:
           - path: /
@@ -20,4 +38,6 @@ spec:
                 name: frontend
                 port:
                   number: {{ .Values.frontend.port }}
+    {{- end }}
 {{- end }}
+

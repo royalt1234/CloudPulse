@@ -69,3 +69,10 @@ frontend: Nginx + React.
 metrics-svc: Hits Azure Monitor API.
 alerts-svc: Hits Azure Alerts API.
 cost-svc: The "Aggregator" that uses the OIDC tokens to hit AWS, Azure, and GCP simultaneously.
+
+By default, if you visit an Nginx Ingress without a specific webpage, Nginx returns a 404 Not Found.
+However, Azure's HTTP Health Probe is extremely strict. It expects a 200 OK. Because Azure sees the 404, it thinks your Nginx pod is dead, marks it as Down, and the Load Balancer completely stops sending external traffic to it
+
+kubectl annotate service ingress-nginx-controller -n ingress-nginx service.beta.kubernetes.io/azure-load-balancer-health-probe-request-path=/healthz 
+
+''fix the health probe issue for cert manager
